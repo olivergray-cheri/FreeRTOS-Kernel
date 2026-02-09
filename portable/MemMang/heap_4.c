@@ -47,7 +47,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
 #include <cheriintrin.h>
 static void *pvHeapCap = NULL;
 #endif
@@ -92,7 +92,7 @@ static void *pvHeapCap = NULL;
 /*-----------------------------------------------------------*/
 
 /* Allocate the memory for the heap. */
-#if ( configAPPLICATION_ALLOCATED_HEAP == 1 ) || defined( __CHERI_PURE_CAPABILITY__ )
+#if ( configAPPLICATION_ALLOCATED_HEAP == 1 ) || ( configCHERI_ENABLED == 1 )
 /* The application writer has already defined the array used for the RTOS
  * heap - probably so it can be placed in a special segment or address. */
     extern uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
@@ -113,7 +113,7 @@ typedef struct A_BLOCK_LINK
  * corruption should a heap buffer overflow occur.
  */
 #if ( configENABLE_HEAP_PROTECTOR == 1 )
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     #error "Heap protector is not currently supported in pure capability mode."
 #endif
 
@@ -185,7 +185,7 @@ void * pvPortMalloc( size_t xWantedSize )
     BlockLink_t * pxNewBlockLink;
     void * pvReturn = NULL;
 
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     size_t xCallerWantedSize = xWantedSize;
 #endif
 
@@ -360,7 +360,7 @@ void * pvPortMalloc( size_t xWantedSize )
     #endif /* if ( configUSE_MALLOC_FAILED_HOOK == 1 ) */
 
     configASSERT( ( ( ( size_t ) pvReturn ) & ( size_t ) portBYTE_ALIGNMENT_MASK ) == 0 );
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     pvReturn = cheri_bounds_set(pvReturn, xCallerWantedSize);
 #endif
     return pvReturn;
@@ -376,7 +376,7 @@ void vPortFree( void * pv )
     {
         /* The memory being freed will have an BlockLink_t structure immediately
          * before it. */
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
         /* For purecap, the bounds are set in malloc, so we cannot just take the
         capability and subtract base. We have to rederive. */
         puc = ucHeap;
@@ -483,7 +483,7 @@ static void prvHeapInit( void ) /* PRIVILEGED_FUNCTION */
     portPOINTER_SIZE_TYPE uxStartAddress, uxEndAddress;
     size_t xTotalHeapSize = configTOTAL_HEAP_SIZE;
 
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     if(pvHeapCap == NULL)
     {
         pvHeapCap = pvPortGetHeapCapability();
@@ -509,7 +509,7 @@ static void prvHeapInit( void ) /* PRIVILEGED_FUNCTION */
 
     /* xStart is used to hold a pointer to the first item in the list of free
      * blocks.  The void cast is used to prevent compiler warnings. */
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     xStart.pxNextFreeBlock = cheri_address_set(pvHeapCap, heapPROTECT_BLOCK_POINTER( uxStartAddress ));
 #else
     xStart.pxNextFreeBlock = ( void * ) heapPROTECT_BLOCK_POINTER( uxStartAddress );
@@ -521,7 +521,7 @@ static void prvHeapInit( void ) /* PRIVILEGED_FUNCTION */
     uxEndAddress = uxStartAddress + ( portPOINTER_SIZE_TYPE ) xTotalHeapSize;
     uxEndAddress -= ( portPOINTER_SIZE_TYPE ) xHeapStructSize;
     uxEndAddress &= ~( ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK );
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     pxEnd = cheri_address_set(pvHeapCap, uxEndAddress);
 #else
     pxEnd = ( BlockLink_t * ) uxEndAddress;
@@ -531,7 +531,7 @@ static void prvHeapInit( void ) /* PRIVILEGED_FUNCTION */
 
     /* To start with there is a single free block that is sized to take up the
      * entire heap space, minus the space taken by pxEnd. */
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     pxFirstFreeBlock = cheri_address_set(pvHeapCap, uxStartAddress);
 #else
     pxFirstFreeBlock = ( BlockLink_t * ) uxStartAddress;

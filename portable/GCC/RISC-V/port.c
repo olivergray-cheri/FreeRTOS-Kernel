@@ -82,7 +82,7 @@ const StackType_t xISRStackTop = ( StackType_t ) &( xISRStack[ configISR_STACK_S
     #define portISR_STACK_FILL_BYTE    0xee
 #else
     extern StackType_t __freertos_irq_stack_top[];
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     StackType_t xISRStackTop;
     extern StackType_t __freertos_irq_stack_bottom[];
 #else
@@ -138,7 +138,7 @@ uintptr_t xTaskReturnAddress = ( uintptr_t ) portTASK_RETURN_ADDRESS;
 
 /*-----------------------------------------------------------*/
 
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
 /* Weak definition to access an infinite capability for all other capabilities to be derived from.
  * This can be overridden by implementing this function in the application code, for example if DDC
  * is not available or has been restricted, and is not suitable for this purpose. */
@@ -179,7 +179,7 @@ void vPortInitialiseCheriISRStack( void ) {
                                 (uintptr_t)__freertos_irq_stack_top);
 }
 #endif /* configISR_STACK_SIZE_WORDS */
-#endif /* __CHERI_PURE_CAPABILITY__ */
+#endif /*  configCHERI_ENABLED == 1 */
 /*-----------------------------------------------------------*/
 
 #if ( configMTIME_BASE_ADDRESS != 0 ) && ( configMTIMECMP_BASE_ADDRESS != 0 )
@@ -191,7 +191,7 @@ void vPortInitialiseCheriISRStack( void ) {
 
     __asm volatile( "csrr %0, mhartid" : "=r"( ulHartId ) );
 
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     volatile uint32_t * const pulTimeLow = cheri_bounds_set(cheri_address_set(pvPortGetInfiniteCapability(), configMTIME_BASE_ADDRESS ), sizeof(uint32_t));
     volatile uint32_t * const pulTimeHigh = cheri_bounds_set(cheri_address_set(pvPortGetInfiniteCapability(), configMTIME_BASE_ADDRESS + 4UL ), sizeof(uint32_t));
     pullMachineTimerCompareRegister = cheri_bounds_set(
@@ -225,11 +225,11 @@ void vPortInitialiseCheriISRStack( void ) {
 BaseType_t xPortStartScheduler( void )
 {
     extern void xPortStartFirstTask( void );
-    #ifdef __CHERI_PURE_CAPABILITY__ && !defined( configISR_STACK_SIZE_WORDS )
+    #if ( configCHERI_ENABLED == 1 ) && !defined( configISR_STACK_SIZE_WORDS )
     {
         vPortInitialiseCheriISRStack();
     }
-    #endif /* __CHERI_PURE_CAPABILITY__ */
+    #endif /*  configCHERI_ENABLED == 1 */
 
     #if ( configASSERT_DEFINED == 1 )
     {
