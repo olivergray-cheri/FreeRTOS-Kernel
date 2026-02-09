@@ -31,6 +31,12 @@
 #define PORTCONTEXT_H
 
 #ifdef __CHERI_PURE_CAPABILITY__
+#define configCHERI_ENABLED 1
+#else
+#define configCHERI_ENABLED 0
+#endif
+
+#if ( configCHERI_ENABLED == 1 )
    #define load_a  lgc  /* Load an immediate pointer (i.e. load immediate address and make it a capability) */
    #define load_x  lc   /* Load  a pointer, i.e. a capability from memory */
    #define store_x sc   /* Store a pointer, i.e. a capability to memory */
@@ -142,7 +148,7 @@
    #define MEPC mepc
    #define ADDI addi
    #define MV   mv
-#endif /* __CHERI_PURE_CAPABILITY__ */
+#endif /*  configCHERI_ENABLED == 1 */
 
 #include "freertos_risc_v_chip_specific_extensions.h"
 
@@ -153,12 +159,10 @@
  * notes at the top of portASM.S file. */
 #ifdef __riscv_32e
     #define portCONTEXT_SIZE               ( 15 * portWORD_SIZE )
-    #define portCRITICAL_NESTING_OFFSET    13
-    #define portMSTATUS_OFFSET             14
+    #define portCRITICAL_NESTING_OFFSET    14
 #else
     #define portCONTEXT_SIZE               ( 31 * portWORD_SIZE )
-    #define portCRITICAL_NESTING_OFFSET    29
-    #define portMSTATUS_OFFSET             30
+    #define portCRITICAL_NESTING_OFFSET    30
 #endif
 
 /*-----------------------------------------------------------*/

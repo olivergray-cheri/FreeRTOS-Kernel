@@ -46,8 +46,16 @@
  *-----------------------------------------------------------
  */
 
-/* Type definitions. */
+#ifndef configCHERI_ENABLED
 #ifdef __CHERI_PURE_CAPABILITY__
+#define configCHERI_ENABLED 1
+#else
+#define configCHERI_ENABLED 0
+#endif
+#endif
+
+/* Type definitions. */
+#if ( configCHERI_ENABLED == 1 )
     #define portPOINTER_SIZE_TYPE    uintptr_t
     #define portSTACK_TYPE           uintptr_t
 #endif
@@ -208,7 +216,7 @@ extern size_t xCriticalNesting;
     #error "configMTIME_BASE_ADDRESS and configMTIMECMP_BASE_ADDRESS must be defined in FreeRTOSConfig.h.  Set them to zero if there is no MTIME (machine time) clock.  See www.FreeRTOS.org/Using-FreeRTOS-on-RISC-V.html"
 #endif /* if defined( configCLINT_BASE_ADDRESS ) && !defined( configMTIME_BASE_ADDRESS ) && ( configCLINT_BASE_ADDRESS == 0 ) */
 
-#ifdef __CHERI_PURE_CAPABILITY__
+#if ( configCHERI_ENABLED == 1 )
     /**
      * @brief Return a capability that covers the FreeRTOS heap region.
      *
