@@ -145,6 +145,25 @@ uintptr_t xTaskReturnAddress = ( uintptr_t ) portTASK_RETURN_ADDRESS;
 
 __attribute__((weak)) void * pvPortGetInfiniteCapability( void ) { return cheri_ddc_get(); }
 
+#if ( configAPPLICATION_ALLOCATED_HEAP != 1 )
+    PRIVILEGED_DATA uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+#else
+    extern uint8_t ucHeap[ configTOTAL_HEAP_SIZE ];
+#endif /* configAPPLICATION_ALLOCATED_HEAP */
+
+static void *pvHeapCap = NULL;
+
+void * pvPortGetHeapCapability( void )
+{
+    if (pvHeapCap == NULL)
+    {
+        /* Set up the heap capability */
+        pvHeapCap = cheri_bounds_set(cheri_address_set(pvPortGetInfiniteCapability(), (uintptr_t)ucHeap), configTOTAL_HEAP_SIZE);
+        configASSERT( pvHeapCap != NULL );
+    }
+    return pvHeapCap;
+}
+
 /* Sets up capabilities required by kernel for ISR Stack.
  * 
  *  If config is using linker defined stack, `xISRStackTop` address is set, 
