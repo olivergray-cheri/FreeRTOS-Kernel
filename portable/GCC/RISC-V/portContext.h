@@ -83,7 +83,6 @@
    #define A1 ca1
    #define A2 ca2
    #define MEPC mepcc
-   #define ADD  cadd
    #define ADDI caddi
    #define MV   cmv
 #else
@@ -141,7 +140,6 @@
    #define A1 a1
    #define A2 a2
    #define MEPC mepc
-   #define ADD add
    #define ADDI addi
    #define MV   mv
 #endif /* __CHERI_PURE_CAPABILITY__ */
@@ -166,56 +164,57 @@
 /*-----------------------------------------------------------*/
 
 .extern pxCurrentTCB
-   .extern xISRStackTop
-   .extern xCriticalNesting
-   .extern pxCriticalNesting
+.extern xISRStackTop
+.extern xCriticalNesting
+.extern pxCriticalNesting
 /*-----------------------------------------------------------*/
 
    .macro portcontextSAVE_CONTEXT_INTERNAL
-addi sp, sp, -portCONTEXT_SIZE
-store_x x1, 1 * portWORD_SIZE( sp )
-store_x x5, 2 * portWORD_SIZE( sp )
-store_x x6, 3 * portWORD_SIZE( sp )
-store_x x7, 4 * portWORD_SIZE( sp )
-store_x x8, 5 * portWORD_SIZE( sp )
-store_x x9, 6 * portWORD_SIZE( sp )
-store_x x10, 7 * portWORD_SIZE( sp )
-store_x x11, 8 * portWORD_SIZE( sp )
-store_x x12, 9 * portWORD_SIZE( sp )
-store_x x13, 10 * portWORD_SIZE( sp )
-store_x x14, 11 * portWORD_SIZE( sp )
-store_x x15, 12 * portWORD_SIZE( sp )
+ADDI SP,SP, -portCONTEXT_SIZE
+store_x  X1,  1 * portWORD_SIZE( SP )
+store_x  X5,  2 * portWORD_SIZE( SP )
+store_x  X6,  3 * portWORD_SIZE( SP )
+store_x  X7,  4 * portWORD_SIZE( SP )
+store_x  X8,  5 * portWORD_SIZE( SP )
+store_x  X9,  6 * portWORD_SIZE( SP )
+store_x X10,  7 * portWORD_SIZE( SP )
+store_x X11,  8 * portWORD_SIZE( SP )
+store_x X12,  9 * portWORD_SIZE( SP )
+store_x X13, 10 * portWORD_SIZE( SP )
+store_x X14, 11 * portWORD_SIZE( SP )
+store_x X15, 12 * portWORD_SIZE( SP )
 #ifndef __riscv_32e
-    store_x x16, 13 * portWORD_SIZE( sp )
-    store_x x17, 14 * portWORD_SIZE( sp )
-    store_x x18, 15 * portWORD_SIZE( sp )
-    store_x x19, 16 * portWORD_SIZE( sp )
-    store_x x20, 17 * portWORD_SIZE( sp )
-    store_x x21, 18 * portWORD_SIZE( sp )
-    store_x x22, 19 * portWORD_SIZE( sp )
-    store_x x23, 20 * portWORD_SIZE( sp )
-    store_x x24, 21 * portWORD_SIZE( sp )
-    store_x x25, 22 * portWORD_SIZE( sp )
-    store_x x26, 23 * portWORD_SIZE( sp )
-    store_x x27, 24 * portWORD_SIZE( sp )
-    store_x x28, 25 * portWORD_SIZE( sp )
-    store_x x29, 26 * portWORD_SIZE( sp )
-    store_x x30, 27 * portWORD_SIZE( sp )
-    store_x x31, 28 * portWORD_SIZE( sp )
+    store_x X16, 13 * portWORD_SIZE( SP )
+    store_x X17, 14 * portWORD_SIZE( SP )
+    store_x X18, 15 * portWORD_SIZE( SP )
+    store_x X19, 16 * portWORD_SIZE( SP )
+    store_x X20, 17 * portWORD_SIZE( SP )
+    store_x X21, 18 * portWORD_SIZE( SP )
+    store_x X22, 19 * portWORD_SIZE( SP )
+    store_x X23, 20 * portWORD_SIZE( SP )
+    store_x X24, 21 * portWORD_SIZE( SP )
+    store_x X25, 22 * portWORD_SIZE( SP )
+    store_x X26, 23 * portWORD_SIZE( SP )
+    store_x X27, 24 * portWORD_SIZE( SP )
+    store_x X28, 25 * portWORD_SIZE( SP )
+    store_x X29, 26 * portWORD_SIZE( SP )
+    store_x X30, 27 * portWORD_SIZE( SP )
+    store_x X31, 28 * portWORD_SIZE( SP )
 #endif /* ifndef __riscv_32e */
 
-load_x t0, xCriticalNesting                                   /* Load the value of xCriticalNesting into t0. */
-store_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Store the critical nesting value to the stack. */
+load_a T0, xCriticalNesting                                   /* Load the address of xCriticalNesting into T0. */
+load_w t0, 0( T0 )                                            /* Load the value of xCriticalNesting into t0. */
+store_w t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( SP ) /* Store the critical nesting value to the stack. */
 
 
 csrr t0, mstatus /* Required for MPIE bit. */
-store_x t0, portMSTATUS_OFFSET * portWORD_SIZE( sp )
-
+store_w t0, portMSTATUS_OFFSET * portWORD_SIZE( SP ) /* Store the mstatus value to the stack. */
 
 portasmSAVE_ADDITIONAL_REGISTERS /* Defined in freertos_risc_v_chip_specific_extensions.h to save any registers unique to the RISC-V implementation. */
 
-load_x t0, pxCurrentTCB          /* Load pxCurrentTCB. */
-store_x sp, 0 ( t0 )             /* Write sp to first TCB member. */
+load_a T0, pxCurrentTCB          /* Load the address of pxCurrentTCB. */
+load_x T0, 0(T0)                 /* Load pxCurrentTCB. */
+store_x SP, 0 ( T0 )             /* Write sp to first TCB member. */
 
    .endm
 /*-----------------------------------------------------------*/
@@ -223,72 +222,76 @@ store_x sp, 0 ( t0 )             /* Write sp to first TCB member. */
    .macro portcontextSAVE_EXCEPTION_CONTEXT
 portcontextSAVE_CONTEXT_INTERNAL
 csrr a0, mcause
-csrr a1, mepc
-addi a1, a1, 4          /* Synchronous so update exception return address to the instruction after the instruction that generated the exception. */
-store_x a1, 0 ( sp )    /* Save updated exception return address. */
-load_x sp, xISRStackTop /* Switch to ISR stack. */
+csrr A1, MEPC
+ADDI A1, A1, 4          /* Synchronous so update exception return address to the instruction after the instruction that generated the exception. */
+store_x A1, 0 ( SP )    /* Save updated exception return address. */
+load_a SP, xISRStackTop /* Load the address of xISRStackTop. */
+load_x SP, 0 ( SP )     /* Switch to ISR stack. */
    .endm
 /*-----------------------------------------------------------*/
 
    .macro portcontextSAVE_INTERRUPT_CONTEXT
 portcontextSAVE_CONTEXT_INTERNAL
 csrr a0, mcause
-csrr a1, mepc
-store_x a1, 0 ( sp )    /* Asynchronous interrupt so save unmodified exception return address. */
-load_x sp, xISRStackTop /* Switch to ISR stack. */
+csrr A1, MEPC
+store_x A1, 0 ( SP )    /* Asynchronous interrupt so save unmodified exception return address. */
+load_a SP, xISRStackTop /* Load the address of xISRStackTop. */
+load_x SP, 0 ( SP )     /* Switch to ISR stack. */
    .endm
 /*-----------------------------------------------------------*/
 
    .macro portcontextRESTORE_CONTEXT
-load_x t1, pxCurrentTCB /* Load pxCurrentTCB. */
-load_x sp, 0 ( t1 )     /* Read sp from first TCB member. */
+load_a T1, pxCurrentTCB /* Load the address of pxCurrentTCB. */
+load_x T1, 0( T1 )      /* Load pxCurrentTCB. */
+load_x SP, 0( T1 )      /* Read sp from first TCB member. */
 
 /* Load mepc with the address of the instruction in the task to run next. */
-load_x t0, 0 ( sp )
-csrw mepc, t0
+load_x T0, 0 ( SP )
+csrw MEPC, T0
 
 /* Defined in freertos_risc_v_chip_specific_extensions.h to restore any registers unique to the RISC-V implementation. */
 portasmRESTORE_ADDITIONAL_REGISTERS
 
 /* Load mstatus with the interrupt enable bits used by the task. */
-load_x t0, portMSTATUS_OFFSET * portWORD_SIZE( sp )
+load_w t0, portMSTATUS_OFFSET * portWORD_SIZE( SP )
 csrw mstatus, t0                                             /* Required for MPIE bit. */
 
-load_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Obtain xCriticalNesting value for this task from task's stack. */
-load_x t1, pxCriticalNesting                                 /* Load the address of xCriticalNesting into t1. */
-store_x t0, 0 ( t1 )                                         /* Restore the critical nesting value for this task. */
+load_w t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( SP ) /* Obtain xCriticalNesting value for this task from task's stack. */
+load_a T1, pxCriticalNesting                                 /* Load the address of pxCriticalNesting into t1. */
+load_x T1, 0( T1 )                                           /* Load the xCriticalNesting pointer (from *pxCriticalNesting) in to T1 */
+store_w t0, 0 ( T1 )                                         /* Restore the critical nesting value for this task to *xCriticalNesting. */
 
-load_x x1, 1 * portWORD_SIZE( sp )
-load_x x5, 2 * portWORD_SIZE( sp )
-load_x x6, 3 * portWORD_SIZE( sp )
-load_x x7, 4 * portWORD_SIZE( sp )
-load_x x8, 5 * portWORD_SIZE( sp )
-load_x x9, 6 * portWORD_SIZE( sp )
-load_x x10, 7 * portWORD_SIZE( sp )
-load_x x11, 8 * portWORD_SIZE( sp )
-load_x x12, 9 * portWORD_SIZE( sp )
-load_x x13, 10 * portWORD_SIZE( sp )
-load_x x14, 11 * portWORD_SIZE( sp )
-load_x x15, 12 * portWORD_SIZE( sp )
+load_x  X1,  1 * portWORD_SIZE( SP )
+load_x  X5,  2 * portWORD_SIZE( SP )
+load_x  X6,  3 * portWORD_SIZE( SP )
+load_x  X7,  4 * portWORD_SIZE( SP )
+load_x  X8,  5 * portWORD_SIZE( SP )
+load_x  X9,  6 * portWORD_SIZE( SP )
+load_x X10,  7 * portWORD_SIZE( SP )
+load_x X11,  8 * portWORD_SIZE( SP )
+load_x X12,  9 * portWORD_SIZE( SP )
+load_x X13, 10 * portWORD_SIZE( SP )
+load_x X14, 11 * portWORD_SIZE( SP )
+load_x X15, 12 * portWORD_SIZE( SP )
 #ifndef __riscv_32e
-    load_x x16, 13 * portWORD_SIZE( sp )
-    load_x x17, 14 * portWORD_SIZE( sp )
-    load_x x18, 15 * portWORD_SIZE( sp )
-    load_x x19, 16 * portWORD_SIZE( sp )
-    load_x x20, 17 * portWORD_SIZE( sp )
-    load_x x21, 18 * portWORD_SIZE( sp )
-    load_x x22, 19 * portWORD_SIZE( sp )
-    load_x x23, 20 * portWORD_SIZE( sp )
-    load_x x24, 21 * portWORD_SIZE( sp )
-    load_x x25, 22 * portWORD_SIZE( sp )
-    load_x x26, 23 * portWORD_SIZE( sp )
-    load_x x27, 24 * portWORD_SIZE( sp )
-    load_x x28, 25 * portWORD_SIZE( sp )
-    load_x x29, 26 * portWORD_SIZE( sp )
-    load_x x30, 27 * portWORD_SIZE( sp )
-    load_x x31, 28 * portWORD_SIZE( sp )
+   load_x X16, 13 * portWORD_SIZE( SP )
+   load_x X17, 14 * portWORD_SIZE( SP )
+   load_x X18, 15 * portWORD_SIZE( SP )
+   load_x X19, 16 * portWORD_SIZE( SP )
+   load_x X20, 17 * portWORD_SIZE( SP )
+   load_x X21, 18 * portWORD_SIZE( SP )
+   load_x X22, 19 * portWORD_SIZE( SP )
+   load_x X23, 20 * portWORD_SIZE( SP )
+   load_x X24, 21 * portWORD_SIZE( SP )
+   load_x X25, 22 * portWORD_SIZE( SP )
+   load_x X26, 23 * portWORD_SIZE( SP )
+   load_x X27, 24 * portWORD_SIZE( SP )
+   load_x X28, 25 * portWORD_SIZE( SP )
+   load_x X29, 26 * portWORD_SIZE( SP )
+   load_x X30, 27 * portWORD_SIZE( SP )
+   load_x X31, 28 * portWORD_SIZE( SP )
 #endif /* ifndef __riscv_32e */
-addi sp, sp, portCONTEXT_SIZE
+ADDI SP, SP, portCONTEXT_SIZE
 
 mret
    .endm
