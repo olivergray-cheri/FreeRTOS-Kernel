@@ -1,6 +1,7 @@
 /*
  * FreeRTOS Kernel V11.2.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2025-2026 Codasip s.r.o. <oliver.gray@codasip.com>
  *
  * SPDX-License-Identifier: MIT
  *
@@ -29,17 +30,121 @@
 #ifndef PORTCONTEXT_H
 #define PORTCONTEXT_H
 
-#if __riscv_xlen == 64
-    #define portWORD_SIZE    8
-    #define store_x          sd
-    #define load_x           ld
+#ifdef __CHERI_PURE_CAPABILITY__
+   #define load_a  lgc  /* Load an immediate pointer (i.e. load immediate address and make it a capability) */
+   #define load_x  lc   /* Load  a pointer, i.e. a capability from memory */
+   #define store_x sc   /* Store a pointer, i.e. a capability to memory */
+#if __riscv_xlen == 64      
+   #define portWORD_SIZE    16  /* Size of a capability on the stack */
+   #define load_w           ld  /* Load a word from memory (64bit) - For CHERI this is different to a capability which is (128bit)*/
+   #define store_w          sd  /* Store a word  to memory (64bit) - For CHERI this is different to a capability which is (128bit)*/ 
 #elif __riscv_xlen == 32
-    #define store_x          sw
-    #define load_x           lw
-    #define portWORD_SIZE    4
-#else
-    #error Assembler did not define __riscv_xlen
+   #define portWORD_SIZE    8   /* Size of a capability on the stack */
+   #define load_w           lw  /* Load a word from memory (32bit) - For CHERI this is different to a capability which is (64bit)*/
+   #define store_w          sw  /* Store a word to memory (32bit) - For CHERI this is different to a capability which is (64bit)*/
 #endif
+   #define X0 c0
+   #define X1 c1
+   #define X2 c2
+   #define X3 c3
+   #define X4 c4
+   #define X5 c5
+   #define X6 c6
+   #define X7 c7
+   #define X8 c8
+   #define X9 c9
+   #define X10 c10
+   #define X11 c11
+   #define X12 c12
+   #define X13 c13
+   #define X14 c14
+   #define X15 c15
+   #define X16 c16
+   #define X17 c17
+   #define X18 c18
+   #define X19 c19
+   #define X20 c20
+   #define X21 c21
+   #define X22 c22
+   #define X23 c23
+   #define X24 c24
+   #define X25 c25
+   #define X26 c26
+   #define X27 c27
+   #define X28 c28
+   #define X29 c29
+   #define X30 c30
+   #define X31 c31
+   #define RA cra
+   #define SP csp
+   #define T0 ct0
+   #define T1 ct1
+   #define A0 ca0
+   #define A1 ca1
+   #define A2 ca2
+   #define MEPC mepcc
+   #define ADD  cadd
+   #define ADDI caddi
+   #define MV   cmv
+#else
+#if __riscv_xlen == 64
+   #define portWORD_SIZE    8
+   #define load_w           ld  /* Load a word from memory (64bit)*/
+   #define store_w          sd  /* Store a word to memory (64bit) */ 
+#elif __riscv_xlen == 32
+   #define portWORD_SIZE    4
+   #define load_w           lw  /* Load a word from memory (32bit)*/
+   #define store_w          sw  /* Store a word to memory (32bit) */
+#else
+   #error Assembler did not define __riscv_xlen
+#endif
+   #define load_a  la        /* Load an immediate pointer (i.e. load immediate address) */
+   #define load_x  load_w    /* Load  a word from memory */
+   #define store_x store_w   /* Store a word to memory */
+   #define X0 x0
+   #define X1 x1
+   #define X2 x2
+   #define X3 x3
+   #define X4 x4
+   #define X5 x5
+   #define X6 x6
+   #define X7 x7
+   #define X8 x8
+   #define X9 x9
+   #define X10 x10
+   #define X11 x11
+   #define X12 x12
+   #define X13 x13
+   #define X14 x14
+   #define X15 x15
+   #define X16 x16
+   #define X17 x17
+   #define X18 x18
+   #define X19 x19
+   #define X20 x20
+   #define X21 x21
+   #define X22 x22
+   #define X23 x23
+   #define X24 x24
+   #define X25 x25
+   #define X26 x26
+   #define X27 x27
+   #define X28 x28
+   #define X29 x29
+   #define X30 x30
+   #define X31 x31
+   #define RA ra
+   #define SP sp
+   #define T0 t0
+   #define T1 t1
+   #define A0 a0
+   #define A1 a1
+   #define A2 a2
+   #define MEPC mepc
+   #define ADD add
+   #define ADDI addi
+   #define MV   mv
+#endif /* __CHERI_PURE_CAPABILITY__ */
 
 #include "freertos_risc_v_chip_specific_extensions.h"
 
