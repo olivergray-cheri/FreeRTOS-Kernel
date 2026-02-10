@@ -2,6 +2,7 @@
  * FreeRTOS Kernel <DEVELOPMENT BRANCH>
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * Copyright (C) 2025-2026 Codasip s.r.o. <oliver.gray@codasip.com>
+ * Copyright (C) 2020-2021 Hesham Almatary <Hesham.Almatary@cl.cam.ac.uk>
  *
  * SPDX-License-Identifier: MIT
  *
@@ -166,14 +167,22 @@ void vPortInitialiseCheriISRStack( void ) {
 
     void vPortSetupTimerInterrupt( void )
     {
-        uint32_t ulCurrentTimeHigh, ulCurrentTimeLow;
-        volatile uint32_t * const pulTimeHigh = ( volatile uint32_t * const ) ( ( configMTIME_BASE_ADDRESS ) + 4UL ); /* 8-byte type so high 32-bit word is 4 bytes up. */
-        volatile uint32_t * const pulTimeLow = ( volatile uint32_t * const ) ( configMTIME_BASE_ADDRESS );
-        volatile uint32_t ulHartId;
+    uint32_t ulCurrentTimeHigh, ulCurrentTimeLow;
+    volatile uint32_t ulHartId;
 
-        __asm volatile ( "csrr %0, mhartid" : "=r" ( ulHartId ) );
+    __asm volatile( "csrr %0, mhartid" : "=r"( ulHartId ) );
 
-        pullMachineTimerCompareRegister = ( volatile uint64_t * ) ( ullMachineTimerCompareRegisterBase + ( ulHartId * sizeof( uint64_t ) ) );
+#ifdef __CHERI_PURE_CAPABILITY__
+    volatile uint32_t * const pulTimeLow = cheri_bounds_set(cheri_address_set(pvPortGetInfiniteCapability(), configMTIME_BASE_ADDRESS ), sizeof(uint32_t));
+    volatile uint32_t * const pulTimeHigh = cheri_bounds_set(cheri_address_set(pvPortGetInfiniteCapability(), configMTIME_BASE_ADDRESS + 4UL ), sizeof(uint32_t));
+    pullMachineTimerCompareRegister = cheri_bounds_set(
+                                          cheri_address_set(pvPortGetInfiniteCapability(), ( ullMachineTimerCompareRegisterBase + ( ulHartId * sizeof( uint64_t ) ) )),
+                                      sizeof(uint64_t));
+#else
+    volatile uint32_t * const pulTimeHigh = ( volatile uint32_t * const ) ( ( configMTIME_BASE_ADDRESS ) + 4UL ); /* 8-byte typer so high 32-bit word is 4 bytes up. */
+    volatile uint32_t * const pulTimeLow = ( volatile uint32_t * const ) ( configMTIME_BASE_ADDRESS );
+    pullMachineTimerCompareRegister  = ( volatile uint64_t * ) ( ullMachineTimerCompareRegisterBase + ( ulHartId * sizeof( uint64_t ) ) );
+#endif
 
         do
         {
