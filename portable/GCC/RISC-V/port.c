@@ -1,6 +1,7 @@
 /*
  * FreeRTOS Kernel V11.2.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright (C) 2025-2026 Codasip s.r.o. <oliver.gray@codasip.com>
  *
  * SPDX-License-Identifier: MIT
  *
@@ -38,6 +39,10 @@
 /* Standard includes. */
 #include "string.h"
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#include <cheriintrin.h>
+#endif
+
 #ifdef configCLINT_BASE_ADDRESS
     #warning "The configCLINT_BASE_ADDRESS constant has been deprecated. configMTIME_BASE_ADDRESS and configMTIMECMP_BASE_ADDRESS are currently being derived from the (possibly 0) configCLINT_BASE_ADDRESS setting.  Please update to define configMTIME_BASE_ADDRESS and configMTIMECMP_BASE_ADDRESS directly in place of configCLINT_BASE_ADDRESS. See www.FreeRTOS.org/Using-FreeRTOS-on-RISC-V.html"
 #endif
@@ -61,9 +66,11 @@
  * to use a statically allocated array as the interrupt stack.  Alternative leave
  * configISR_STACK_SIZE_WORDS undefined and update the linker script so that a
  * linker variable names __freertos_irq_stack_top has the same value as the top
- * of the stack used by main.  Using the linker script method will repurpose the
- * stack that was used by main before the scheduler was started for use as the
- * interrupt stack after the scheduler has started. */
+ * of the stack used by main, if using CHERI __freertos_irq_stack_bottom must also
+ * be defined.  Using the linker script method will repurpose the stack that was
+ * used by main before the scheduler was started for use as the interrupt stack
+ * after the scheduler has started. */
+
 #ifdef configISR_STACK_SIZE_WORDS
 static __attribute__( ( aligned( 16 ) ) ) StackType_t xISRStack[ configISR_STACK_SIZE_WORDS ] = { 0 };
 const StackType_t xISRStackTop = ( StackType_t ) &( xISRStack[ configISR_STACK_SIZE_WORDS & ~portBYTE_ALIGNMENT_MASK ] );
@@ -73,10 +80,14 @@ const StackType_t xISRStackTop = ( StackType_t ) &( xISRStack[ configISR_STACK_S
  * the ISR stack. */
     #define portISR_STACK_FILL_BYTE    0xee
 #else
-    extern const uint32_t __freertos_irq_stack_top[];
+    extern StackType_t __freertos_irq_stack_top[];
+#ifdef __CHERI_PURE_CAPABILITY__
+    StackType_t xISRStackTop;
+    extern StackType_t __freertos_irq_stack_bottom[];
+#else
     const StackType_t xISRStackTop = ( StackType_t ) __freertos_irq_stack_top;
 #endif
-
+#endif
 /*
  * Setup the timer to generate the tick interrupts.  The implementation in this
  * file is weak to allow application writers to change the timer used to
@@ -99,7 +110,8 @@ size_t xCriticalNesting = ( size_t ) 0xaaaaaaaa;
 size_t * pxCriticalNesting = &xCriticalNesting;
 
 /* Used to catch tasks that attempt to return from their implementing function. */
-size_t xTaskReturnAddress = ( size_t ) portTASK_RETURN_ADDRESS;
+/* NOTE: If using a CHERI system portTASK_RETURN_ADDRESS (configTASK_RETURN_ADDRESS) must be a valid capability with execute permsissions*/
+uintptr_t xTaskReturnAddress = ( uintptr_t ) portTASK_RETURN_ADDRESS;
 
 /* Set configCHECK_FOR_STACK_OVERFLOW to 3 to add ISR stack checking to task
  * stack checking.  A problem in the ISR stack will trigger an assert, not call
@@ -123,6 +135,31 @@ size_t xTaskReturnAddress = ( size_t ) portTASK_RETURN_ADDRESS;
     #define portCHECK_ISR_STACK()
 #endif /* configCHECK_FOR_STACK_OVERFLOW > 2 */
 
+/*-----------------------------------------------------------*/
+
+#ifdef __CHERI_PURE_CAPABILITY__
+/* Weak definition to access an infinite capability for all other capabilities to be derived from.
+ * This can be overridden by implementing this function in the application code, for example if DDC
+ * is not available or has been restricted, and is not suitable for this purpose. */
+
+__attribute__((weak)) void * pvPortGetInfiniteCapability( void ) { return cheri_ddc_get(); }
+
+/* Sets up capabilities required by kernel for ISR Stack.
+ * 
+ *  If config is using linker defined stack, `xISRStackTop` address is set, 
+ *  and bounds are set to size of linker defined stack by __freertos_irq_stack_bottom and __freertos_irq_stack_top.
+ */     
+#if ! defined( configISR_STACK_SIZE_WORDS )
+void vPortInitialiseCheriISRStack( void ) {
+    /* Set up the ISR stack pointer. */
+    xISRStackTop = (StackType_t *)cheri_address_set(
+                                    cheri_bounds_set(
+                                        cheri_address_set(pvPortGetInfiniteCapability(), (uintptr_t)__freertos_irq_stack_bottom),
+                                    (uintptr_t)__freertos_irq_stack_top - (uintptr_t)__freertos_irq_stack_bottom),
+                                (uintptr_t)__freertos_irq_stack_top);
+}
+#endif /* configISR_STACK_SIZE_WORDS */
+#endif /* __CHERI_PURE_CAPABILITY__ */
 /*-----------------------------------------------------------*/
 
 #if ( configMTIME_BASE_ADDRESS != 0 ) && ( configMTIMECMP_BASE_ADDRESS != 0 )
@@ -160,13 +197,18 @@ size_t xTaskReturnAddress = ( size_t ) portTASK_RETURN_ADDRESS;
 BaseType_t xPortStartScheduler( void )
 {
     extern void xPortStartFirstTask( void );
+    #ifdef __CHERI_PURE_CAPABILITY__ && !defined( configISR_STACK_SIZE_WORDS )
+    {
+        vPortInitialiseCheriISRStack();
+    }
+    #endif /* __CHERI_PURE_CAPABILITY__ */
 
     #if ( configASSERT_DEFINED == 1 )
     {
         /* Check alignment of the interrupt stack - which is the same as the
          * stack that was being used by main() prior to the scheduler being
          * started. */
-        configASSERT( ( xISRStackTop & portBYTE_ALIGNMENT_MASK ) == 0 );
+        configASSERT( ( (size_t) xISRStackTop & portBYTE_ALIGNMENT_MASK ) == 0 );
 
         #ifdef configISR_STACK_SIZE_WORDS
         {

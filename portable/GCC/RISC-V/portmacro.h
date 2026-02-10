@@ -47,14 +47,25 @@
  */
 
 /* Type definitions. */
+#ifdef __CHERI_PURE_CAPABILITY__
+    #define portPOINTER_SIZE_TYPE    uintptr_t
+    #define portSTACK_TYPE           uintptr_t
+#endif
+
 #if __riscv_xlen == 64
+#ifndef portSTACK_TYPE
     #define portSTACK_TYPE           uint64_t
+#endif
     #define portBASE_TYPE            int64_t
     #define portUBASE_TYPE           uint64_t
     #define portMAX_DELAY            ( TickType_t ) 0xffffffffffffffffUL
+#ifndef  portPOINTER_SIZE_TYPE
     #define portPOINTER_SIZE_TYPE    uint64_t
+#endif
 #elif __riscv_xlen == 32
+#ifndef portSTACK_TYPE
     #define portSTACK_TYPE           uint32_t
+#endif
     #define portBASE_TYPE            int32_t
     #define portUBASE_TYPE           uint32_t
     #define portMAX_DELAY            ( TickType_t ) 0xffffffffUL
