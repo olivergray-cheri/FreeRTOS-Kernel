@@ -208,6 +208,16 @@ extern size_t xCriticalNesting;
     #error "configMTIME_BASE_ADDRESS and configMTIMECMP_BASE_ADDRESS must be defined in FreeRTOSConfig.h.  Set them to zero if there is no MTIME (machine time) clock.  See www.FreeRTOS.org/Using-FreeRTOS-on-RISC-V.html"
 #endif /* if defined( configCLINT_BASE_ADDRESS ) && !defined( configMTIME_BASE_ADDRESS ) && ( configCLINT_BASE_ADDRESS == 0 ) */
 
+#ifdef __CHERI_PURE_CAPABILITY__
+    /**
+     * @brief Return a capability that covers the FreeRTOS heap region.
+     *
+     * The CHERI port uses this as a base capability to derive capabilities
+     * for heap allocations.
+     */
+    void * pvPortGetHeapCapability( void );
+#endif
+
 /* *INDENT-OFF* */
 #ifdef __cplusplus
     }
